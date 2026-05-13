@@ -22,6 +22,7 @@
           buildInputs = with pkgs; [
             vala
             meson
+            ninja
             pkg-config
 
             gtk4
