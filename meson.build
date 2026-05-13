@@ -11,6 +11,8 @@ dependencies = [
 ]
 
 sources = files(
+    'src/api/api.vala',
+
     'src/application.vala',
     'src/main.vala',
     'src/window.vala',
