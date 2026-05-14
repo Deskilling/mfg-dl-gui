@@ -30,6 +30,18 @@ namespace Mfg {
         public string episodeNum { get; set; }
     }
 
+    public class Stream {
+        public string service { get; set; }
+        public string name { get; set; }
+        public string href  { get; set; }
+        public string seasonNum { get; set; }
+        public string episodeTitle { get; set; }
+        public string episodeAlternativeTitle { get; set; }
+        public string episodeNum { get; set; }
+        public string hoster { get; set; }
+        public string language { get; set; }
+    }
+
     public class ApiClient : GLib.Object {
         private Soup.Session session;
         private string baseUrl;
@@ -211,12 +223,8 @@ namespace Mfg {
                 var root = parser.get_root ();
 
                 Json.Array array;
-                if (root.get_node_type () == Json.NodeType.ARRAY) {
-                    array = root.get_array ();
-                } else {
-                    var obj = root.get_object ();
-                    array = obj.get_array_member ("seasons");
-                }
+                array = root.get_array ();
+
 
                 foreach (var el in array.get_elements ()) {
                     var obj = el.get_object ();
@@ -286,12 +294,8 @@ namespace Mfg {
                 var root = parser.get_root ();
 
                 Json.Array array;
-                if (root.get_node_type () == Json.NodeType.ARRAY) {
-                    array = root.get_array ();
-                } else {
-                    var obj = root.get_object ();
-                    array = obj.get_array_member ("seasons");
-                }
+                array = root.get_array ();
+
 
                 foreach (var el in array.get_elements ()) {
                     var obj = el.get_object ();
@@ -313,6 +317,145 @@ namespace Mfg {
             }
 
             return episodes;
+        }
+
+        public async Stream[] ? stream (Episode episode) {
+            var builder = new Json.Builder ();
+
+            builder.begin_object ();
+
+            builder.set_member_name ("service");
+            builder.add_string_value ("Aniworld");
+
+            builder.set_member_name ("name");
+            builder.add_string_value (episode.name);
+
+            builder.set_member_name ("href");
+            builder.add_string_value (episode.href);
+
+            builder.set_member_name ("seasonnum");
+            builder.add_string_value (episode.seasonNum);
+
+            builder.set_member_name ("episodenum");
+            builder.add_string_value (episode.episodeNum);
+
+            builder.set_member_name ("episodetitle");
+            builder.add_string_value (episode.episodeTitle);
+
+            builder.set_member_name ("episodealternativetitle");
+            builder.add_string_value (episode.episodeAlternativeTitle);
+
+            builder.end_object ();
+
+            var generator = new Json.Generator ();
+            generator.pretty = true;
+            generator.set_root (builder.get_root ());
+
+            string json_body = generator.to_data (null);
+
+            message ("Streams request JSON:\n%s", json_body);
+
+            var body = yield post_async ("/streams", json_body);
+
+            if (body == null) {
+                warning ("No response from /streams");
+                return null;
+            }
+
+            message ("Streams response JSON:\n%s", body);
+
+            var streams = new Stream[0];
+
+            try {
+                var parser = new Json.Parser ();
+                parser.load_from_data (body);
+
+                var root = parser.get_root ();
+
+                Json.Array array;
+                if (root.get_node_type () == Json.NodeType.ARRAY) {
+                    array = root.get_array ();
+                } else {
+                    var obj = root.get_object ();
+                    array = obj.get_array_member ("seasons");
+                }
+
+                foreach (var el in array.get_elements ()) {
+                    var obj = el.get_object ();
+
+                    streams += new Stream () {
+                        service = obj.get_string_member_with_default ("service", ""),
+                        name = obj.get_string_member_with_default ("name", ""),
+                        href = obj.get_string_member_with_default ("href", ""),
+                        seasonNum = obj.get_string_member_with_default ("seasonNum", ""),
+                        episodeNum = obj.get_string_member_with_default ("episodeNum", ""),
+                        episodeTitle = obj.get_string_member_with_default ("episodeTitle", ""),
+                        episodeAlternativeTitle = obj.get_string_member_with_default ("episodeAlternativeTitle", ""),
+                        language = obj.get_string_member_with_default ("language", ""),
+                        hoster = obj.get_string_member_with_default ("hoster", ""),
+                    };
+                }
+
+            } catch (Error e) {
+                warning ("Failed to parse episodes: %s", e.message);
+                return null;
+            }
+
+            return streams;
+        }
+
+        public async void download (Stream stream) {
+            var builder = new Json.Builder ();
+
+            builder.begin_object ();
+
+            builder.set_member_name ("service");
+            builder.add_string_value ("Aniworld");
+
+            builder.set_member_name ("name");
+            builder.add_string_value (stream.name);
+
+            builder.set_member_name ("href");
+            builder.add_string_value (stream.href);
+
+            builder.set_member_name ("seasonnum");
+            builder.add_string_value (stream.seasonNum);
+
+            builder.set_member_name ("episodenum");
+            builder.add_string_value (stream.episodeNum);
+
+            builder.set_member_name ("episodetitle");
+            builder.add_string_value (stream.episodeTitle);
+
+            builder.set_member_name ("episodealternativetitle");
+            builder.add_string_value (stream.episodeAlternativeTitle);
+
+            builder.set_member_name ("language");
+            builder.add_string_value (stream.language);
+
+            builder.set_member_name ("hoster");
+            builder.add_string_value (stream.hoster);
+
+            builder.end_object ();
+
+            var generator = new Json.Generator ();
+            generator.pretty = true;
+            generator.set_root (builder.get_root ());
+
+            string json_body = generator.to_data (null);
+
+            message ("Download request JSON:\n%s", json_body);
+
+            var body = yield post_async ("/download", json_body);
+
+            if (body == null) {
+                warning ("No response from /download");
+                return;
+            }
+
+            message ("Download response JSON:\n%s", body);
+
+            // TODO Parse the Repsonse
         }
 
     }

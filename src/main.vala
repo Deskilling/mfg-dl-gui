@@ -26,6 +26,13 @@ namespace Mfg {
 
         }
 
+        var streams = yield api.stream (episodes[5]);
+
+        foreach (var r in streams) {
+            print ("Stream %s %s %s\n", r.episodeTitle, r.language, r.hoster);
+        }
+
+        // yield api.download (streams[0]);
     }
 
     public static int main (string[] args) {
