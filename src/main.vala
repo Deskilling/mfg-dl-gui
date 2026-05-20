@@ -36,12 +36,7 @@ namespace Mfg {
     }
 
     public static int main (string[] args) {
-        var loop = new MainLoop ();
-
-        saft.begin ("rascal");
-
-        loop.run ();
-        return 0;
+        return new App ().run (args);
     }
 
 }

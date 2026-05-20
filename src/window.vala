@@ -1,24 +1,24 @@
 using Gtk;
+using Adw;
 
 namespace Mfg {
-
-    public class Window : Gtk.ApplicationWindow {
-        public Window (Gtk.Application app) {
+    public class Window : Adw.ApplicationWindow {
+        public Window (Adw.Application app) {
             Object (
-                    application: app,
-                    title: "mfg-dl-gui",
-                    default_width: 900,
-                    default_height: 600
-            );
+                application: app,
+                title: "mfg-dl-gui",
+                default_width: 860,
+                default_height: 640
+                );
         }
 
         construct {
-            var label = new Gtk.Label ("mfg") {
-                halign = Gtk.Align.CENTER,
-                valign = Gtk.Align.CENTER,
-            };
+            var search_page = new SearchPage ();
 
-            set_child (label);
+            var nav = new Adw.NavigationView ();
+            nav.add (search_page);
+
+            set_content (nav);
         }
     }
 }

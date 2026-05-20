@@ -2,3 +2,7 @@ build
 
 # Macos Finder
 .DS_STORE
+
+# direnv
+/.direnv
+.envrc

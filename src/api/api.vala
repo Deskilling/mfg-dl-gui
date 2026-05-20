@@ -43,40 +43,12 @@ namespace Mfg {
     }
 
     public class ApiClient : GLib.Object {
-        private Soup.Session session;
+        public Soup.Session session;
         private string baseUrl;
 
         public ApiClient (string baseUrl = "http://localhost:6702") {
             this.baseUrl = baseUrl;
             this.session = new Soup.Session ();
-        }
-
-        public async string ? get_async (string path) {
-            var msg = new Soup.Message ("GET", baseUrl + path);
-            message ("Sending GET message to: \n%s", baseUrl + path);
-
-            try {
-                var stream = yield session.send_async (msg, GLib.Priority.DEFAULT, null);
-
-                if (msg.status_code != 200) {
-                    warning ("HTTP %u for %s", msg.status_code, path);
-                    return null;
-                }
-
-                var data = new DataInputStream (stream);
-                var builder = new StringBuilder ();
-
-                string ? line;
-
-                while ((line = yield data.read_line_async (GLib.Priority.DEFAULT, null)) != null) {
-                    builder.append (line);
-                }
-
-                return builder.str;
-            } catch (Error e) {
-                warning ("GET failed: %s", e.message);
-                return null;
-            }
         }
 
         public async string ? post_async (string path, string json_body) {
@@ -110,7 +82,7 @@ namespace Mfg {
 
         public async SearchResult[] ? search (string query) {
             var encoded = GLib.Uri.escape_string (query, null, false);
-            var body = yield get_async ("/search?q=" + encoded);
+            var body = yield post_async ("/search?q=" + encoded, "");
 
             if (body == null) {
                 return null;
@@ -141,7 +113,7 @@ namespace Mfg {
 
         public async SearchResult[] ? searchSite (string query, string service) {
             var encoded = GLib.Uri.escape_string (query, null, false);
-            var body = yield get_async ("/searchsite?q=" + encoded + "&service=" + service);
+            var body = yield post_async ("/searchsite?q=" + encoded + "&service=" + service, "");
 
             if (body == null) {
                 return null;
@@ -165,11 +137,54 @@ namespace Mfg {
                     results += r;
                 }
 
-
             } catch (Error e) {
                 warning ("Failed to parse search results: %s", e.message);
             }
             return results;
+        }
+
+        public async string ? cover (SearchResult result) {
+            var builder = new Json.Builder ();
+
+            builder.begin_object ();
+
+            builder.set_member_name ("service");
+            builder.add_string_value ("Aniworld");
+
+            builder.set_member_name ("name");
+            builder.add_string_value (result.name);
+
+            builder.set_member_name ("href");
+            builder.add_string_value (result.href);
+
+            builder.set_member_name ("cover");
+            builder.add_string_value (result.cover);
+
+            builder.set_member_name ("description");
+            builder.add_string_value (result.description);
+
+            builder.set_member_name ("production_year");
+            builder.add_string_value (result.production_year);
+
+            builder.end_object ();
+
+            var generator = new Json.Generator ();
+            generator.pretty = true;
+            generator.set_root (builder.get_root ());
+
+            string json_body = generator.to_data (null);
+
+            message ("Season request JSON:\n%s", json_body);
+
+            var body = yield post_async ("/cover", json_body);
+
+            if (body == null) {
+                warning ("No response from /cover");
+                return null;
+            }
+
+            message ("Season response JSON:\n%s", body);
+            return body.to_string ();
         }
 
         public async Season[] ? season (SearchResult result) {
